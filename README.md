@@ -1,65 +1,208 @@
 # RAG Platform
 
-Multi-tenant retrieval-augmented generation API: document ingestion, hybrid search, and grounded chat with citations.
-
-**Stack:** FastAPI · PostgreSQL (pgvector) · Redis · ARQ · S3-compatible storage · optional Ollama / OpenAI-compatible providers.
+Multi-tenant retrieval-augmented generation service: ingest documents, index chunks with embeddings, run hybrid search, and answer questions with cited context. Evaluations and operational hooks (health, metrics, rate limits) are built in for local development and staged production rollout.
 
 ## Features
 
-- Knowledge bases scoped by organization
-- PDF and plain-text upload with async indexing
-- Hybrid vector + keyword retrieval, optional reranking
-- Chat with citation validation
-- Prometheus metrics and structured logging
+Implemented today:
+
+- **Document upload** — multipart upload to object storage; metadata scoped by organization and knowledge base.
+- **Parsing** — plain text and PDF extraction behind a parser registry.
+- **Chunking and indexing** — normalization, fixed-size chunking, embedding, and persistence (background job).
+- **Embeddings** — provider abstraction; fake embeddings for local dev, optional Ollama adapter.
+- **Vector and full-text retrieval** — pgvector similarity plus PostgreSQL full-text search.
+- **Hybrid retrieval** — score fusion and reranking hooks in the application layer.
+- **RAG chat** — context assembly, LLM call, citation validation, concurrency and budget guards (Redis).
+- **Query history** — stored queries with retrieval/LLM metadata; fetch by id.
+- **Evaluations** — async eval runs over datasets with lease-based worker safety.
+- **Tenant isolation** — organization- and knowledge-base-scoped data; per-organization API keys.
+- **Background processing** — ARQ workers on Redis; transactional outbox for reliable side effects.
+
+## Architecture overview
+
+The codebase follows a **Hexagonal Lite** layout under `src/rag_platform/`:
+
+| Layer | Role |
+|-------|------|
+| **Domain** | Entities, enums, errors, tenant context. |
+| **Application** | Use cases, ports, validation, retrieval and prompt assembly. |
+| **Infrastructure** | SQLAlchemy repos, S3, Redis, provider adapters, outbox, guards. |
+| **API** | FastAPI transport — auth deps, rate limit, routers, schemas. |
+| **Workers** | ARQ task functions, outbox dispatcher cron, stale recovery. |
+| **Composition** | `composition/http.py` and `composition/worker.py` wire adapters to use cases. |
+
+```mermaid
+flowchart LR
+  Client --> API
+  API --> App[Application use cases]
+  App --> Domain
+  App --> Ports
+  Ports --> Infra[Infrastructure adapters]
+  Infra --> PG[(PostgreSQL)]
+  Infra --> Redis[(Redis)]
+  Infra --> S3[(MinIO / S3)]
+  Worker[ARQ workers] --> App
+  Outbox[Outbox dispatcher] --> Redis
+```
+
+Deeper diagrams and boundaries: [docs/architecture.md](docs/architecture.md).
+
+## Tech stack
+
+- **Runtime:** Python 3.13+, [uv](https://docs.astral.sh/uv/)
+- **API:** FastAPI, Uvicorn
+- **Data:** PostgreSQL 16 + pgvector, SQLAlchemy 2 (async), Alembic
+- **Queue / cache:** Redis, [ARQ](https://arq-docs.helpmanual.io/)
+- **Object storage:** S3-compatible (MinIO in Compose)
+- **Quality:** Ruff, pytest (see [Makefile](Makefile) and CI)
 
 ## Quick start
 
+Prerequisites: Docker, Docker Compose, [uv](https://docs.astral.sh/uv/).
+
 ```bash
+git clone <repository-url>
+cd RAG-Planform
+
 cp .env.example .env
-docker compose up -d
-uv sync
-uv run alembic upgrade head
-uv run uvicorn rag_platform.api.app:app --reload --port 8000
+# edit .env if you change ports or secrets (see Configuration)
+
+make install
+make compose-up
+make migrate
 ```
 
-Worker (separate terminal):
+Migration `0003_dev_seed_org_kb` seeds organization `00000000-0000-0000-0000-000000000001` and a default knowledge base for local testing.
+
+Check the stack:
 
 ```bash
-uv run arq rag_platform.workers.settings.WorkerSettings
+curl -sS http://localhost:8000/health
+curl -sS http://localhost:8000/ready
 ```
 
-OpenAPI: `http://localhost:8000/docs`
+Interactive API docs: `http://localhost:8000/docs` (with the API running).
 
-## Tests
+Host-only API (dependencies in Compose):
 
 ```bash
-uv sync --group dev
-docker compose up -d
-uv run alembic upgrade head
-uv run pytest -q
+docker compose up -d postgres redis minio
+make migrate
+uvicorn rag_platform.main:app --host 0.0.0.0 --port 8000 --reload
 ```
+
+Workers (Redis and DB must be up):
+
+```bash
+arq rag_platform.workers.settings.WorkerSettings
+```
+
+The Compose `worker` service runs the same ARQ settings class as the [Dockerfile](Dockerfile).
+
+## Configuration
+
+Variables are read from `.env` (template: [.env.example](.env.example)). Defaults align with [docker-compose.yml](docker-compose.yml):
+
+| Service | Host port |
+|---------|-----------|
+| API | 8000 |
+| PostgreSQL | 5436 |
+| Redis | 6380 |
+| MinIO API / console | 9000 / 9001 |
+
+Exhaustive list and production rules: [docs/configuration.md](docs/configuration.md).
+
+## Running the application
+
+| Task | Command |
+|------|---------|
+| Install deps | `make install` |
+| Lint | `make lint` |
+| Tests | `make test` |
+| Full stack | `make compose-up` |
+| Validate Compose | `make compose-config` |
+| Migrations | `make migrate` |
+
+Compose services: `postgres`, `redis`, `minio`, `api`, `worker`.
+
+## API and authentication
+
+**Prefix:** `/v1`
+
+| Method | Path | Notes |
+|--------|------|--------|
+| `GET` | `/health`, `/ready` | Public |
+| `GET` | `/metrics` | Prometheus |
+| `GET` | `/v1/documents` | List |
+| `POST` | `/v1/documents` | Upload (202) |
+| `GET` | `/v1/documents/{document_id}` | Metadata |
+| `DELETE` | `/v1/documents/{document_id}` | Delete |
+| `POST` | `/v1/chat` | RAG chat |
+| `GET` | `/v1/queries/{query_id}` | Query record |
+| `POST` | `/v1/evaluations` | Start (202) |
+| `GET` | `/v1/evaluations/{evaluation_id}` | Status |
+
+Details: [docs/api.md](docs/api.md).
+
+### Tenant API keys
+
+With `ALLOW_OPEN_API=false` (`.env.example` default), use:
+
+```http
+Authorization: Bearer <secret>
+```
+
+Keys are scoped to an organization; only a hash is stored server-side. The plaintext secret is printed **once** on create.
+
+```bash
+uv run python -m rag_platform.cli.manage_api_keys create \
+  --organization-id 00000000-0000-0000-0000-000000000001 \
+  --name local-dev
+
+uv run python -m rag_platform.cli.manage_api_keys list \
+  --organization-id 00000000-0000-0000-0000-000000000001
+
+uv run python -m rag_platform.cli.manage_api_keys revoke --key-id <uuid>
+```
+
+`ALLOW_OPEN_API=true` bypasses tenant resolution for local experiments only. Production enforces `API_KEY_HASH_PEPPER` and rejects fake providers (`config/settings.py`).
+
+Example:
+
+```bash
+curl -sS -H "Authorization: Bearer <your-key>" \
+  http://localhost:8000/v1/documents
+```
+
+## Background workers
+
+ARQ consumes `ARQ_REDIS_URL` (Compose: Redis logical DB `1`; cache/rate limit use DB `0`).
+
+Jobs in `WorkerSettings.functions`:
+
+- `process_document_job` — parse, chunk, embed, index.
+- `requeue_stale_documents_job` — document recovery.
+- `recover_stale_evaluations_job` — evaluation lease recovery.
+- `dispatch_outbox_events_job` — transactional outbox polling.
+
+Processing is **at-least-once** (retries on workers and outbox). Design handlers for idempotency where needed.
 
 ## Documentation
 
-| Doc | Description |
-|-----|-------------|
-| [API](docs/api.md) | v1 routes, headers, examples |
-| [Configuration](docs/configuration.md) | Environment variables |
-| [Architecture](docs/architecture.md) | Components and data flows |
+| Document | Contents |
+|----------|----------|
+| [docs/api.md](docs/api.md) | HTTP contract |
+| [docs/architecture.md](docs/architecture.md) | Structure and flows |
+| [docs/configuration.md](docs/configuration.md) | Environment |
 
-## Project layout
+Team ADRs: `.cursor/docs/decisions/` (not in this git tree).
 
-| Path | Role |
-|------|------|
-| `src/rag_platform/api` | HTTP routers and middleware |
-| `src/rag_platform/application` | Use cases and ports |
-| `src/rag_platform/infrastructure` | DB, S3, Redis, providers |
-| `src/rag_platform/workers` | ARQ tasks |
-| `alembic/` | Schema migrations |
-| `tests/` | Unit, integration, RAG checks |
+## Current limitations
 
-## Limitations
+- **Providers:** Dev defaults use fake/null LLM, reranker, and embeddings. Ollama embeddings and OpenAI-shaped adapters exist but are not a full multi-vendor LLM product.
+- **Cost:** Redis chat guards use **estimates**; no billing system.
+- **Semantics:** ARQ + outbox = **at-least-once**, not exactly-once.
+- **Operations:** Integration tests and `scripts/load_test_chat.py` help, but production still needs your own load and failure testing.
+- **Auth:** API keys per organization only — no bundled IdP/OAuth flow.
 
-- JWT authentication is not implemented; API key + organization header when `API_KEY` is set.
-- Default compose uses development credentials and fake LLM/embeddings in CI.
-- Not hardened for production without your own secrets, TLS, and provider configuration.
+CI: `make lint`, `make test`, [.github/workflows/ci.yml](.github/workflows/ci.yml).

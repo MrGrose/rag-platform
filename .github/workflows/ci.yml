@@ -2,24 +2,36 @@ name: CI
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
+    branches: [main]
 
 jobs:
-  lint-test:
+  lint-and-unit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v4
         with:
-          python-version: "3.12"
-      - run: uv sync --extra dev
-      - run: uv run ruff check .
-      - run: uv run pytest -q
-      - run: docker compose config
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --extra dev
+      - name: Ruff
+        run: uv run ruff check .
+      - name: Unit tests
+        run: uv run pytest -q -m "not integration and not load_test"
+      - name: Docker Compose config
+        run: docker compose config
 
   integration:
     runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql+asyncpg://rag:rag@localhost:5436/rag
+      REDIS_URL: redis://localhost:6380/0
+      ARQ_REDIS_URL: redis://localhost:6380/1
+      ALLOW_OPEN_API: "true"
+      ALLOW_FAKE_PROVIDERS: "true"
+      RATE_LIMIT_FAIL_CLOSED: "false"
     services:
       postgres:
         image: pgvector/pgvector:pg16
@@ -33,20 +45,73 @@ jobs:
           --health-cmd "pg_isready -U rag -d rag"
           --health-interval 5s
           --health-timeout 5s
-          --health-retries 10
+          --health-retries 12
       redis:
         image: redis:7-alpine
         ports:
           - 6380:6379
-    env:
-      DATABASE_URL: postgresql+asyncpg://rag:rag@localhost:5436/rag
-      REDIS_URL: redis://localhost:6380/0
-      ARQ_REDIS_URL: redis://localhost:6380/1
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 12
     steps:
       - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: astral-sh/setup-uv@v4
         with:
-          python-version: "3.12"
-      - run: uv sync --extra dev
-      - run: uv run alembic upgrade head
-      - run: uv run pytest -q -m integration
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --extra dev
+      - name: Install DB clients
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client redis-tools
+      - name: Wait for PostgreSQL
+        run: |
+          for i in $(seq 1 30); do
+            if pg_isready -h localhost -p 5436 -U rag -d rag; then
+              echo "PostgreSQL is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "PostgreSQL did not become ready in time"
+          exit 1
+      - name: Wait for Redis
+        run: |
+          for i in $(seq 1 30); do
+            if redis-cli -h localhost -p 6380 ping | grep -q PONG; then
+              echo "Redis is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Redis did not become ready in time"
+          exit 1
+      - name: Run migrations
+        run: uv run alembic upgrade head
+      - name: Verify pgvector extension
+        env:
+          DATABASE_URL: postgresql+asyncpg://rag:rag@localhost:5436/rag
+        run: |
+          uv run python -c '
+          import asyncio
+          import os
+          from sqlalchemy import text
+          from sqlalchemy.ext.asyncio import create_async_engine
+
+          async def main() -> None:
+              url = os.environ["DATABASE_URL"]
+              engine = create_async_engine(url)
+              async with engine.connect() as conn:
+                  row = (
+                      await conn.execute(
+                          text("SELECT 1 FROM pg_extension WHERE extname = '\''vector'\''")
+                      )
+                  ).scalar()
+                  if row != 1:
+                      raise SystemExit("pgvector extension is not installed")
+              await engine.dispose()
+
+          asyncio.run(main())
+          '
+      - name: Integration tests
+        run: uv run pytest -q -m integration
