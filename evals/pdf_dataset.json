@@ -1,0 +1,56 @@
+[
+  {
+    "id": "p01",
+    "question": "How many days are electronics refundable?",
+    "expected_sources": [
+      "refund-policy.pdf"
+    ],
+    "expected_page": 2,
+    "answerable": true
+  },
+  {
+    "id": "p02",
+    "question": "What does express delivery cost?",
+    "expected_sources": [
+      "delivery-terms.pdf"
+    ],
+    "expected_page": 2,
+    "answerable": true
+  },
+  {
+    "id": "p03",
+    "question": "How long do warranty repairs take?",
+    "expected_sources": [
+      "warranty.pdf"
+    ],
+    "expected_page": 2,
+    "answerable": true
+  },
+  {
+    "id": "p04",
+    "question": "What credit applies below 99.0 percent uptime?",
+    "expected_sources": [
+      "sla.pdf"
+    ],
+    "expected_page": 2,
+    "answerable": true
+  },
+  {
+    "id": "p05",
+    "question": "How long is personal data stored after the last activity?",
+    "expected_sources": [
+      "privacy-policy.pdf"
+    ],
+    "expected_page": 2,
+    "answerable": true
+  },
+  {
+    "id": "p06",
+    "question": "What is the first response time for Priority 2 incidents?",
+    "expected_sources": [
+      "support.pdf"
+    ],
+    "expected_page": 2,
+    "answerable": true
+  }
+]

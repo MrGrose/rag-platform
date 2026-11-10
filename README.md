@@ -163,6 +163,8 @@ What the table says:
 - The reranker adds roughly 2.7 seconds per question and changes nothing here. It only rescues the fake embeddings, which is a synthetic artefact, not a reason to enable it in production. Measure reranking on your own corpus before paying that latency.
 - The corpus is small and synthetic, so treat the numbers as a reproducible harness, not as a universal benchmark.
 
+`examples/corpus_pdf` contains six two-page PDFs. `tests/integration/test_pdf_pages.py` checks that chunks keep page numbers and that retrieval returns `page: 2` for a fact that lives on the second page.
+
 ## Fact extraction
 
 `POST /v1/extract` turns an indexed document into JSON with quote-level citations:
