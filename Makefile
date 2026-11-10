@@ -1,7 +1,7 @@
-.PHONY: help install test lint eval demo compose-up compose-config migrate
+.PHONY: help install test lint eval eval-matrix demo compose-up compose-config migrate
 
 help:
-	@echo "install test lint eval demo compose-up compose-config migrate"
+	@echo "install test lint eval eval-matrix demo compose-up compose-config migrate"
 
 install:
 	uv sync --extra dev
@@ -14,6 +14,9 @@ demo:
 
 eval:
 	uv run python scripts/eval.py
+
+eval-matrix:
+	uv run python scripts/eval_matrix.py
 
 lint:
 	uv run ruff check .

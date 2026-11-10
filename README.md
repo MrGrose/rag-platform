@@ -141,6 +141,28 @@ Each run ingests the corpus into a fresh knowledge base, asks every question thr
 
 The corpus is small and synthetic, so these numbers show that the pipeline works end to end, not that the system generalises. Add your own documents under a new corpus directory to measure a realistic case.
 
+### Retrieval ablation
+
+`make eval-matrix` ingests the corpus plus 16 distractor documents and runs 18 answerable questions in eight retrieval configurations. No LLM calls: this measures retrieval only.
+
+| Embeddings | Retrieval | Reranker | hit@1 | hit@5 | MRR@5 | p50, ms |
+|------------|-----------|----------|-------|-------|-------|---------|
+| fake | vector | off | 0.111 | 0.111 | 0.139 | 3.3 |
+| fake | vector | bge-reranker | 0.944 | 1.000 | 0.972 | 2762 |
+| fake | hybrid | off | 0.111 | 0.111 | 0.139 | 4.9 |
+| fake | hybrid | bge-reranker | 0.944 | 1.000 | 0.972 | 2753 |
+| bge-m3 | vector | off | 0.944 | 1.000 | 0.972 | 78 |
+| bge-m3 | vector | bge-reranker | 0.944 | 1.000 | 0.972 | 2781 |
+| bge-m3 | hybrid | off | 0.944 | 1.000 | 0.972 | 56 |
+| bge-m3 | hybrid | bge-reranker | 0.944 | 1.000 | 0.972 | 2874 |
+
+What the table says:
+
+- Embedding quality dominates. Deterministic fake vectors score 0.111 hit@5, bge-m3 scores 1.000 on the same questions.
+- On this corpus hybrid retrieval does not beat vector-only once bge-m3 is used: hit@1 and MRR are identical. Keep the full-text branch for rare tokens and exact identifiers, but do not expect a gain on policy questions.
+- The reranker adds roughly 2.7 seconds per question and changes nothing here. It only rescues the fake embeddings, which is a synthetic artefact, not a reason to enable it in production. Measure reranking on your own corpus before paying that latency.
+- The corpus is small and synthetic, so treat the numbers as a reproducible harness, not as a universal benchmark.
+
 ## Fact extraction
 
 `POST /v1/extract` turns an indexed document into JSON with quote-level citations:

@@ -1,0 +1,148 @@
+[
+  {
+    "id": "m01",
+    "question": "What does the policy say about the 30 day window?",
+    "expected_sources": [
+      "refund-policy.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m02",
+    "question": "How much is the late payment interest per month?",
+    "expected_sources": [
+      "contract-template.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m03",
+    "question": "Which email should a customer write to for a data export?",
+    "expected_sources": [
+      "privacy-policy.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m04",
+    "question": "What is the flat fee below the free delivery threshold?",
+    "expected_sources": [
+      "delivery-terms.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m05",
+    "question": "How many business days does a warranty repair take?",
+    "expected_sources": [
+      "warranty.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m06",
+    "question": "What uptime percentage starts the 25 percent credit?",
+    "expected_sources": [
+      "sla.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m07",
+    "question": "How long do I have to send back a gadget I bought?",
+    "expected_sources": [
+      "refund-policy.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m08",
+    "question": "How quickly will my parcel arrive if I pay extra?",
+    "expected_sources": [
+      "delivery-terms.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m09",
+    "question": "Who can call support by phone?",
+    "expected_sources": [
+      "support.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m10",
+    "question": "What happens to the bill if the service is unavailable for a month?",
+    "expected_sources": [
+      "sla.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m11",
+    "question": "How much does extra disk space cost?",
+    "expected_sources": [
+      "pricing.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m12",
+    "question": "When can I cancel without being charged?",
+    "expected_sources": [
+      "onboarding.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m13",
+    "question": "What is covered if the battery loses capacity in the first year?",
+    "expected_sources": [
+      "warranty.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m14",
+    "question": "How long is data kept after a customer stops using the service?",
+    "expected_sources": [
+      "privacy-policy.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m15",
+    "question": "Compare the refund window for electronics with the hardware warranty period.",
+    "expected_sources": [
+      "refund-policy.md",
+      "warranty.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m16",
+    "question": "Which approval is needed for a 60,000 EUR purchase and who signs it?",
+    "expected_sources": [
+      "procurement-policy.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m17",
+    "question": "What are the payment term and the termination notice?",
+    "expected_sources": [
+      "contract-template.md"
+    ],
+    "answerable": true
+  },
+  {
+    "id": "m18",
+    "question": "What is the trial length and the monthly price after it?",
+    "expected_sources": [
+      "onboarding.md",
+      "pricing.md"
+    ],
+    "answerable": true
+  }
+]
