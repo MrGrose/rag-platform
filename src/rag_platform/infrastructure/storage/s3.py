@@ -1,7 +1,7 @@
 import asyncio
 
 import boto3
-from botocore.client import BaseClient
+from botocore.client import BaseClient, Config
 from botocore.exceptions import ClientError
 
 from rag_platform.application.ports.storage import ObjectStorage
@@ -16,6 +16,7 @@ def _client() -> BaseClient:
         aws_access_key_id=settings.s3_access_key,
         aws_secret_access_key=settings.s3_secret_key,
         region_name="us-east-1",
+        config=Config(s3={"addressing_style": "path"}),
     )
 
 
