@@ -46,3 +46,13 @@ Content-Type: application/json
 {
   "knowledge_base_id": "{{kb}}"
 }
+
+### Extract facts from an indexed document
+POST {{host}}/v1/extract
+X-Organization-Id: {{org}}
+Content-Type: application/json
+
+{
+  "knowledge_base_id": "{{kb}}",
+  "document_id": "00000000-0000-4000-8000-000000000003"
+}

@@ -25,6 +25,7 @@ Key lifecycle CLI: `python -m rag_platform.cli.manage_api_keys create|list|revok
 | DELETE | `/v1/documents/{id}` | Soft delete + cleanup job |
 | POST | `/v1/chat` | Sync RAG answer + citations (concurrency/budget limits) |
 | GET | `/v1/queries/{id}` | Query and retrieval audit |
+| POST | `/v1/extract` | Structured facts from an indexed document, with quote citations |
 | POST | `/v1/evaluations` | Create evaluation + outbox event (`202`, `pending`) |
 | GET | `/v1/evaluations/{id}` | Evaluation status/results |
 | GET | `/health` | Liveness |
@@ -41,3 +42,16 @@ Key lifecycle CLI: `python -m rag_platform.cli.manage_api_keys create|list|revok
 `POST /v1/evaluations` commits the evaluation row and an outbox event atomically. A worker dispatches to ARQ (at-least-once; worker is idempotent for completed runs).
 
 OpenAPI: FastAPI app at runtime.
+
+## Extraction
+
+`POST /v1/extract` builds JSON from an already indexed document: parties, dates, amounts, obligations, risks, decisions and owners. Every fact carries the quote the model copied and the chunk it came from. Fields the document does not state are listed in `missing`.
+
+```json
+{
+  "knowledge_base_id": "00000000-0000-4000-8000-000000000002",
+  "document_id": "3d0f9c1e-6d43-4d1f-9c2e-5a3b7c9d1e2f"
+}
+```
+
+The endpoint requires a non-fake LLM provider and returns `503` otherwise. Large documents are truncated at 24,000 characters and the response sets `truncated`. Citations point to the chunk index; page numbers are not stored by the parsers yet.

@@ -14,6 +14,7 @@ Implemented today:
 - **Hybrid retrieval** — score fusion, optional `bge-reranker-v2-m3` cross-encoder, relevance threshold that refuses without calling the LLM.
 - **RAG chat** — context assembly, LLM call, citation validation, concurrency and budget guards (Redis).
 - **Query history** — stored queries with retrieval/LLM metadata; fetch by id.
+- **Fact extraction** — `POST /v1/extract` returns parties, dates, amounts, obligations, risks, decisions and owners with quote citations and a `missing` list.
 - **Evaluations** — async eval runs over datasets with lease-based worker safety.
 - **Tenant isolation** — organization- and knowledge-base-scoped data; per-organization API keys.
 - **Background processing** — ARQ workers on Redis; transactional outbox for reliable side effects.
@@ -139,6 +140,18 @@ Each run ingests the corpus into a fresh knowledge base, asks every question thr
 | 2026-11-10 | bge-m3, bge-reranker-v2-m3, deepseek-chat | 1.000 | 1.000 | 1.000 | 1.000 | 4.39 s | 5.30 s | 21,253 in / 533 out | $0.0436 |
 
 The corpus is small and synthetic, so these numbers show that the pipeline works end to end, not that the system generalises. Add your own documents under a new corpus directory to measure a realistic case.
+
+## Fact extraction
+
+`POST /v1/extract` turns an indexed document into JSON with quote-level citations:
+
+```bash
+curl -sS -X POST http://localhost:8000/v1/extract \
+  -H 'Content-Type: application/json' -H 'X-Organization-Id: 00000000-0000-4000-8000-000000000001' \
+  -d '{"knowledge_base_id": "...", "document_id": "..."}'
+```
+
+Each fact carries `text`, `quote`, and a citation with `chunk_id` and `chunk_index`. Fields the document does not mention arrive in `missing`. The endpoint needs a real LLM (`LLM_PROVIDER=openai` plus `LLM_API_KEY`); with fake providers it returns `503`. Documents longer than 24,000 characters are truncated, and the response sets `truncated`.
 
 ## Configuration
 

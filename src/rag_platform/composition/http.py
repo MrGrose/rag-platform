@@ -8,6 +8,7 @@ from rag_platform.application.ports.storage import ObjectStorage
 from rag_platform.application.use_cases.chat import Chat
 from rag_platform.application.use_cases.create_document import CreateDocument
 from rag_platform.application.use_cases.delete_document import DeleteDocument
+from rag_platform.application.use_cases.extract_facts import ExtractFacts
 from rag_platform.application.use_cases.get_document import GetDocument
 from rag_platform.application.use_cases.get_evaluation import GetEvaluation
 from rag_platform.application.use_cases.get_query import GetQuery
@@ -15,8 +16,10 @@ from rag_platform.application.use_cases.list_documents import ListDocuments
 from rag_platform.application.use_cases.run_evaluation import RunEvaluation
 from rag_platform.application.use_cases.start_evaluation import StartEvaluation
 from rag_platform.config import get_settings
+from rag_platform.domain.errors import ServiceUnavailableError
 from rag_platform.infrastructure.cache.kb_version_adapter import RedisKnowledgeBaseVersionPort
 from rag_platform.infrastructure.chat.redis_resource_guard import RedisChatResourceGuard
+from rag_platform.infrastructure.db.chunk_repository import SqlAlchemyChunkRepository
 from rag_platform.infrastructure.db.document_repository import SqlAlchemyDocumentRepository
 from rag_platform.infrastructure.db.evaluation_repository import SqlAlchemyEvaluationRepository
 from rag_platform.infrastructure.db.llm_request_log import SqlAlchemyLlmRequestLog
@@ -126,4 +129,15 @@ async def build_run_evaluation(session: AsyncSession, knowledge_base_id: UUID) -
         eval_repo=SqlAlchemyEvaluationRepository(session),
         chat=chat,
         dataset_items=dataset_items,
+    )
+
+
+def build_extract_facts(session: AsyncSession) -> ExtractFacts:
+    settings = get_settings()
+    if settings.llm_provider.strip().lower() == "fake":
+        raise ServiceUnavailableError("extraction requires a non-fake LLM provider")
+    return ExtractFacts(
+        doc_repo=SqlAlchemyDocumentRepository(session),
+        chunk_repo=SqlAlchemyChunkRepository(session),
+        llm=build_llm(settings),
     )
