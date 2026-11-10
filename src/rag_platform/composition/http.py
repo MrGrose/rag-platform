@@ -52,7 +52,7 @@ async def build_chat(session: AsyncSession, knowledge_base_id: UUID) -> Chat:
     settings = get_settings()
     kb_version = await _kb_version().current(str(knowledge_base_id))
     embeddings = CachedEmbeddingProvider(build_embeddings(settings), kb_version)
-    base_retrieval = PgHybridRetrievalEngine(session, embeddings)
+    base_retrieval = PgHybridRetrievalEngine(session, embeddings, mode=settings.retrieval_mode)
     retrieval = CachedRetrievalEngine(base_retrieval)
     return Chat(
         kb_repo=SqlAlchemyKnowledgeBaseRepository(session),

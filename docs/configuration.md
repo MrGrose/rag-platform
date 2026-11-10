@@ -50,7 +50,7 @@ Environment-driven [Pydantic settings](../src/rag_platform/config/settings.py). 
 | `EMBEDDINGS_MODEL` | `BAAI/bge-m3` | sentence-transformers model, 1024 dims |
 | `EMBEDDINGS_DEVICE` | `cpu` | `cpu` or `cuda` |
 | `EMBEDDINGS_BATCH_SIZE` | 16 | encode batch size |
-| `RERANKER_PROVIDER` | `fake` | `fake` or `bge_reranker` |
+| `RERANKER_PROVIDER` | `fake` | `fake`, `bge_reranker`, or `off` to keep retrieval order |
 | `RERANKER_MODEL` | `BAAI/bge-reranker-v2-m3` | cross-encoder model |
 | `LLM_PROVIDER` | `fake` | `fake` or `openai` (OpenAI-compatible endpoint) |
 | `LLM_BASE_URL` | `https://api.deepseek.com/v1` | chat completions base URL |
@@ -71,6 +71,7 @@ In production all three providers must be non-fake, and `ALLOW_FAKE_PROVIDERS` m
 | `LLM_TIMEOUT_SECONDS` | chat generation timeout |
 | `LLM_COST_PER_1K_TOKENS_USD` | estimated cost on `llm_requests` |
 | `RAG_MIN_RELEVANCE_SCORE` | top reranked score below which chat refuses without an LLM call |
+| `RETRIEVAL_MODE` | `hybrid` (vector plus full-text) or `vector` (vector only) |
 
 ## Processing
 

@@ -33,6 +33,7 @@ class Settings(BaseSettings):
     llm_temperature: float = Field(default=0.0, alias="LLM_TEMPERATURE")
     llm_max_retries: int = Field(default=2, alias="LLM_MAX_RETRIES")
     rag_min_relevance_score: float = Field(default=0.2, alias="RAG_MIN_RELEVANCE_SCORE")
+    retrieval_mode: str = Field(default="hybrid", alias="RETRIEVAL_MODE")
     retrieval_top_k: int = Field(default=20, alias="RETRIEVAL_TOP_K")
     rerank_k: int = Field(default=10, alias="RERANK_K")
     context_token_budget: int = Field(default=2000, alias="CONTEXT_TOKEN_BUDGET")

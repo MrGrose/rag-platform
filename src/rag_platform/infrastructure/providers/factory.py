@@ -9,6 +9,7 @@ from rag_platform.infrastructure.providers.fake_embeddings import FakeEmbeddingP
 from rag_platform.infrastructure.providers.fake_llm import FakeLlmProvider
 from rag_platform.infrastructure.providers.fake_reranker import FakeRerankerProvider
 from rag_platform.infrastructure.providers.guard import require_fake_providers_allowed
+from rag_platform.infrastructure.providers.noop_reranker import NoopRerankerProvider
 from rag_platform.infrastructure.providers.openai_llm import OpenAiCompatibleLlmProvider
 
 _BGE_NAMES = {"bge", "bge_m3", "bge-m3", "bge_reranker", "bge-reranker"}
@@ -32,6 +33,8 @@ def build_embeddings(settings: Settings | None = None) -> EmbeddingProvider:
 def build_reranker(settings: Settings | None = None) -> RerankerProvider:
     cfg = settings or get_settings()
     name = cfg.reranker_provider.strip().lower()
+    if name in {"off", "none", "noop"}:
+        return NoopRerankerProvider()
     if name == "fake":
         require_fake_providers_allowed(cfg)
         return FakeRerankerProvider()

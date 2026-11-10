@@ -11,6 +11,7 @@ from rag_platform.infrastructure.providers.factory import (
 )
 from rag_platform.infrastructure.providers.fake_embeddings import FakeEmbeddingProvider
 from rag_platform.infrastructure.providers.fake_llm import FakeLlmProvider
+from rag_platform.infrastructure.providers.noop_reranker import NoopRerankerProvider
 from rag_platform.infrastructure.providers.openai_llm import OpenAiCompatibleLlmProvider
 
 
@@ -69,3 +70,8 @@ def test_unknown_provider_is_rejected() -> None:
     settings = _settings(EMBEDDINGS_PROVIDER="unknown")
     with pytest.raises(ConfigurationError):
         build_embeddings(settings)
+
+
+def test_reranker_off_keeps_retrieval_order() -> None:
+    settings = _settings(RERANKER_PROVIDER="off")
+    assert isinstance(build_reranker(settings), NoopRerankerProvider)

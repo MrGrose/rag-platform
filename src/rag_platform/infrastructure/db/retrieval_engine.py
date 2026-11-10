@@ -17,9 +17,13 @@ class PgHybridRetrievalEngine(RetrievalEngine):
         self,
         session: AsyncSession,
         embeddings: EmbeddingProvider,
+        mode: str = "hybrid",
     ) -> None:
         self._session = session
         self._embeddings = embeddings
+        self._mode = mode.strip().lower()
+        if self._mode not in {"vector", "hybrid"}:
+            raise ValueError(f"unsupported retrieval mode: {mode}")
 
     async def retrieve(
         self,
@@ -53,6 +57,10 @@ class PgHybridRetrievalEngine(RetrievalEngine):
             vector_hits.append(
                 (chunk.id, chunk.document_id, chunk.knowledge_base_id, chunk.content, score),
             )
+
+        if self._mode == "vector":
+            fused = fuse_hits(vector_hits, [], limit)
+            return [replace(hit, page=pages.get(hit.chunk_id)) for hit in fused]
 
         ts_query = func.plainto_tsquery("english", normalized)
         ts_vector = func.to_tsvector("english", DocumentChunkModel.content)
