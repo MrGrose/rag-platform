@@ -23,6 +23,7 @@ class FactCitation:
     chunk_id: UUID | None
     chunk_index: int | None
     quote: str
+    page: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -38,14 +39,14 @@ def _normalize(value: str) -> str:
     return " ".join(value.split()).lower()
 
 
-def _locate(quote: str, chunks: list[DocumentChunk]) -> tuple[UUID | None, int | None]:
+def _locate(quote: str, chunks: list[DocumentChunk]) -> tuple[UUID | None, int | None, int | None]:
     needle = _normalize(quote)
     if not needle:
-        return None, None
+        return None, None, None
     for chunk in chunks:
         if needle in _normalize(chunk.content):
-            return chunk.id, chunk.chunk_index
-    return None, None
+            return chunk.id, chunk.chunk_index, chunk.page
+    return None, None, None
 
 
 class ExtractFacts:
@@ -76,13 +77,14 @@ class ExtractFacts:
         citations: list[FactCitation] = []
         for name in FIELDS:
             for fact in getattr(payload, name):
-                chunk_id, chunk_index = _locate(fact.quote, chunks)
+                chunk_id, chunk_index, page = _locate(fact.quote, chunks)
                 citations.append(
                     FactCitation(
                         field=name,
                         chunk_id=chunk_id,
                         chunk_index=chunk_index,
                         quote=fact.quote,
+                        page=page,
                     )
                 )
         missing = sorted(

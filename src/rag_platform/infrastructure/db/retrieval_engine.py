@@ -1,3 +1,4 @@
+from dataclasses import replace
 from uuid import UUID
 
 from sqlalchemy import func, select
@@ -45,7 +46,9 @@ class PgHybridRetrievalEngine(RetrievalEngine):
         )
         vector_rows = await self._session.execute(vector_stmt)
         vector_hits: list[tuple[UUID, UUID, UUID, str, float]] = []
+        pages: dict[UUID, int | None] = {}
         for chunk, distance in vector_rows.all():
+            pages[chunk.id] = chunk.page
             score = 1.0 / (1.0 + float(distance))
             vector_hits.append(
                 (chunk.id, chunk.document_id, chunk.knowledge_base_id, chunk.content, score),
@@ -66,10 +69,12 @@ class PgHybridRetrievalEngine(RetrievalEngine):
         fts_rows = await self._session.execute(fts_stmt)
         lexical_hits: list[tuple[UUID, UUID, UUID, str, float]] = []
         for chunk, rank in fts_rows.all():
+            pages[chunk.id] = chunk.page
             lexical_hits.append(
                 (chunk.id, chunk.document_id, chunk.knowledge_base_id, chunk.content, float(rank)),
             )
-        return fuse_hits(vector_hits, lexical_hits, limit)
+        fused = fuse_hits(vector_hits, lexical_hits, limit)
+        return [replace(hit, page=pages.get(hit.chunk_id)) for hit in fused]
 
 
 def hit_from_row(

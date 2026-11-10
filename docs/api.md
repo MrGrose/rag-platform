@@ -54,4 +54,4 @@ OpenAPI: FastAPI app at runtime.
 }
 ```
 
-The endpoint requires a non-fake LLM provider and returns `503` otherwise. Large documents are truncated at 24,000 characters and the response sets `truncated`. Citations point to the chunk index; page numbers are not stored by the parsers yet.
+The endpoint requires a non-fake LLM provider and returns `503` otherwise. Large documents are truncated at 24,000 characters and the response sets `truncated`. Citations point to the chunk index and include `page` when the parser reports page boundaries (PDF does, plain text is page 1).

@@ -5,6 +5,7 @@ from uuid import uuid4
 import pytest
 
 from rag_platform.domain.entities import RetrievalHit
+from rag_platform.infrastructure.providers import bge_m3_embeddings, bge_reranker
 from rag_platform.infrastructure.providers.bge_m3_embeddings import BgeM3EmbeddingProvider
 from rag_platform.infrastructure.providers.bge_reranker import BgeRerankerProvider
 
@@ -44,6 +45,8 @@ def fake_sentence_transformers(monkeypatch):
     module.SentenceTransformer = _FakeSentenceTransformer
     module.CrossEncoder = _FakeCrossEncoder
     monkeypatch.setitem(sys.modules, "sentence_transformers", module)
+    monkeypatch.setattr(bge_m3_embeddings, "_MODEL_CACHE", {})
+    monkeypatch.setattr(bge_reranker, "_MODEL_CACHE", {})
     _FakeSentenceTransformer.instances.clear()
     return module
 

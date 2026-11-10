@@ -185,6 +185,7 @@ class Chat:
                     chunk_id=UUID(cid),
                     document_id=by_id[cid].document_id,
                     snippet=by_id[cid].content[:240],
+                    page=by_id[cid].page,
                 )
                 for cid in citation_ids
             ]

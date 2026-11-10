@@ -34,6 +34,7 @@ class DocumentChunk:
     token_count: int
     created_at: datetime
     updated_at: datetime
+    page: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,6 +77,7 @@ class RetrievalHit:
     content: str
     score: float
     rank: int
+    page: int | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,6 +85,7 @@ class Citation:
     chunk_id: UUID
     document_id: UUID
     snippet: str
+    page: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

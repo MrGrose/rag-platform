@@ -12,7 +12,7 @@ Implemented today:
 - **Embeddings** — provider abstraction; deterministic fake vectors for tests, local `bge-m3` (1024 dims) through `sentence-transformers`.
 - **Vector and full-text retrieval** — pgvector similarity plus PostgreSQL full-text search.
 - **Hybrid retrieval** — score fusion, optional `bge-reranker-v2-m3` cross-encoder, relevance threshold that refuses without calling the LLM.
-- **RAG chat** — context assembly, LLM call, citation validation, concurrency and budget guards (Redis).
+- **RAG chat** — context assembly, LLM call, citation validation with page numbers for PDFs, concurrency and budget guards (Redis).
 - **Query history** — stored queries with retrieval/LLM metadata; fetch by id.
 - **Fact extraction** — `POST /v1/extract` returns parties, dates, amounts, obligations, risks, decisions and owners with quote citations and a `missing` list.
 - **Evaluations** — async eval runs over datasets with lease-based worker safety.
@@ -151,7 +151,7 @@ curl -sS -X POST http://localhost:8000/v1/extract \
   -d '{"knowledge_base_id": "...", "document_id": "..."}'
 ```
 
-Each fact carries `text`, `quote`, and a citation with `chunk_id` and `chunk_index`. Fields the document does not mention arrive in `missing`. The endpoint needs a real LLM (`LLM_PROVIDER=openai` plus `LLM_API_KEY`); with fake providers it returns `503`. Documents longer than 24,000 characters are truncated, and the response sets `truncated`.
+Each fact carries `text`, `quote`, and a citation with `chunk_id`, `chunk_index` and `page` when the parser knows it. Fields the document does not mention arrive in `missing`. The endpoint needs a real LLM (`LLM_PROVIDER=openai` plus `LLM_API_KEY`); with fake providers it returns `503`. Documents longer than 24,000 characters are truncated, and the response sets `truncated`.
 
 ## Configuration
 

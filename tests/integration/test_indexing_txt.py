@@ -59,3 +59,4 @@ async def test_txt_upload_produces_chunks_and_vectors() -> None:
         chunks = await chunk_repo.list_for_document(doc.id)
         assert chunks
         assert all(len(chunk.embedding) == FakeEmbeddingProvider.dimension for chunk in chunks)
+        assert all(chunk.page == 1 for chunk in chunks)

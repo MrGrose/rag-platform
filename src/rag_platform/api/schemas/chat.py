@@ -14,6 +14,7 @@ class CitationResponse(BaseModel):
     chunk_id: UUID
     document_id: UUID
     snippet: str
+    page: int | None = None
 
 
 class ChatResponse(BaseModel):
@@ -33,6 +34,7 @@ class ChatResponse(BaseModel):
                     chunk_id=c.chunk_id,
                     document_id=c.document_id,
                     snippet=c.snippet,
+                    page=c.page,
                 )
                 for c in result.citations
             ],

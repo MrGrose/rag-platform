@@ -58,19 +58,31 @@ class ProcessDocument:
         await self._doc_repo.save(processing)
         try:
             raw = await self._storage.get_object(document.storage_key)
-            text = normalize_text(self._parsers.parse(document.mime_type, raw))
+            pages = self._parsers.parse_pages(document.mime_type, raw)
+            text = normalize_text("\n".join(page_text for _page, page_text in pages))
             assert_text_within_limit(text, MAX_DOCUMENT_TEXT_BYTES)
-            pieces = chunk_text(
-                text,
-                ChunkingConfig(
-                    chunk_size=CHUNK_SIZE,
-                    overlap=CHUNK_OVERLAP,
-                    max_chunks=MAX_CHUNK_COUNT,
-                ),
+            config = ChunkingConfig(
+                chunk_size=CHUNK_SIZE,
+                overlap=CHUNK_OVERLAP,
+                max_chunks=MAX_CHUNK_COUNT,
             )
+            pieces: list[tuple[str, int | None]] = []
+            for page_number, page_text in pages:
+                if len(pieces) >= MAX_CHUNK_COUNT:
+                    break
+                remaining = MAX_CHUNK_COUNT - len(pieces)
+                page_pieces = chunk_text(
+                    normalize_text(page_text),
+                    ChunkingConfig(
+                        chunk_size=config.chunk_size,
+                        overlap=config.overlap,
+                        max_chunks=remaining,
+                    ),
+                )
+                pieces.extend((piece, page_number) for piece in page_pieces)
             if not pieces:
                 raise ValidationError("document produced no chunks")
-            vectors = await self._embeddings.embed_texts(pieces)
+            vectors = await self._embeddings.embed_texts([piece for piece, _page in pieces])
             chunks = [
                 DocumentChunk(
                     id=uuid4(),
@@ -83,8 +95,9 @@ class ProcessDocument:
                     token_count=len(piece.split()),
                     created_at=now,
                     updated_at=now,
+                    page=page,
                 )
-                for index, (piece, vector) in enumerate(zip(pieces, vectors, strict=True))
+                for index, ((piece, page), vector) in enumerate(zip(pieces, vectors, strict=True))
             ]
             await self._chunk_repo.replace_for_document(document.id, chunks)
             return await self._doc_repo.save(

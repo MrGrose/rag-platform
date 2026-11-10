@@ -20,6 +20,7 @@ def _to_chunk(row: DocumentChunkModel) -> DocumentChunk:
         token_count=row.token_count,
         created_at=row.created_at,
         updated_at=row.updated_at,
+        page=row.page,
     )
 
 
@@ -43,6 +44,7 @@ class SqlAlchemyChunkRepository(ChunkRepository):
                 content=chunk.content,
                 embedding=chunk.embedding,
                 token_count=chunk.token_count,
+                page=chunk.page,
             )
             self._session.add(row)
         await self._session.flush()

@@ -29,6 +29,7 @@ class FactCitationResponse(BaseModel):
     chunk_id: UUID | None
     chunk_index: int | None
     quote: str
+    page: int | None = None
 
 
 class ExtractResponse(BaseModel):
@@ -73,6 +74,7 @@ async def extract_facts(
                 chunk_id=citation.chunk_id,
                 chunk_index=citation.chunk_index,
                 quote=citation.quote,
+                page=citation.page,
             )
             for citation in result.citations
         ],
