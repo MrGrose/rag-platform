@@ -15,7 +15,13 @@ from rag_platform.infrastructure.providers.openai_llm import OpenAiCompatibleLlm
 
 
 def _settings(**overrides) -> Settings:
-    values = {"APP_ENV": "test", **overrides}
+    values = {
+        "APP_ENV": "test",
+        "EMBEDDINGS_PROVIDER": "fake",
+        "RERANKER_PROVIDER": "fake",
+        "LLM_PROVIDER": "fake",
+        **overrides,
+    }
     return Settings(**values)
 
 

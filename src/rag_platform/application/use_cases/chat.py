@@ -14,7 +14,11 @@ from rag_platform.application.ports.queries import QueryRepository
 from rag_platform.application.ports.repositories import KnowledgeBaseRepository
 from rag_platform.application.ports.reranker import RerankerProvider
 from rag_platform.application.ports.retrieval import RetrievalEngine
-from rag_platform.application.prompts.chat_v1 import PROMPT_VERSION, SYSTEM_PROMPT
+from rag_platform.application.prompts.chat_v1 import (
+    INSUFFICIENT_CONTEXT,
+    PROMPT_VERSION,
+    SYSTEM_PROMPT,
+)
 from rag_platform.application.prompts.safety import sanitize_user_question
 from rag_platform.application.validation.citations import validate_citations
 from rag_platform.config import get_settings
@@ -150,6 +154,29 @@ class Chat:
                 raise ValidationError("llm timeout") from exc
             self._observability.observe_stage("llm", time.perf_counter() - started)
             latency_ms = int((time.perf_counter() - started) * 1000)
+            if completion.text.strip().upper().startswith(INSUFFICIENT_CONTEXT):
+                answer_text = "Not enough indexed content to answer this question."
+                await self._query_repo.save(
+                    Query(
+                        id=query.id,
+                        knowledge_base_id=query.knowledge_base_id,
+                        organization_id=query.organization_id,
+                        question=query.question,
+                        status=QueryStatus.COMPLETED,
+                        answer=answer_text,
+                        error_message=None,
+                        created_at=query.created_at,
+                        updated_at=datetime.now(tz=UTC),
+                    ),
+                )
+                self._observability.inc_chat_request(str(knowledge_base_id), "insufficient")
+                self._observability.observe_chat_latency(time.perf_counter() - started_total)
+                return ChatResult(
+                    query_id=query.id,
+                    answer=answer_text,
+                    citations=[],
+                    insufficient_context=True,
+                )
             allowed = {str(hit.chunk_id) for hit in selected}
             citation_ids = validate_citations(completion.citation_chunk_ids, allowed)
             by_id = {str(hit.chunk_id): hit for hit in selected}

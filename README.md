@@ -101,6 +101,27 @@ arq rag_platform.workers.settings.WorkerSettings
 
 The Compose `worker` service runs the same ARQ settings class as the [Dockerfile](Dockerfile).
 
+## Evaluation
+
+The repository ships a synthetic corpus of 12 documents (`examples/corpus`) and 44 questions (`evals/dataset.json`): 39 answerable, including multi-document ones, and 5 that the corpus cannot answer.
+
+```bash
+# fake providers: checks the pipeline, not the quality
+make eval
+
+# real providers: needs Postgres, Redis, `uv sync --extra local` and an LLM key
+EMBEDDINGS_PROVIDER=bge_m3 RERANKER_PROVIDER=bge_reranker \
+LLM_PROVIDER=openai LLM_API_KEY=... make eval
+```
+
+Each run ingests the corpus into a fresh knowledge base, asks every question through the chat pipeline and writes `reports/eval-YYYY-MM-DD.md`.
+
+| Date | Providers | hit@5 | answers with citations | answer fact match | refusal correctness | p50 | p95 | tokens | cost |
+|------|-----------|-------|------------------------|-------------------|---------------------|-----|-----|--------|------|
+| 2026-11-10 | bge-m3, bge-reranker-v2-m3, deepseek-chat | 1.000 | 1.000 | 1.000 | 1.000 | 4.39 s | 5.30 s | 21,253 in / 533 out | $0.0436 |
+
+The corpus is small and synthetic, so these numbers show that the pipeline works end to end, not that the system generalises. Add your own documents under a new corpus directory to measure a realistic case.
+
 ## Configuration
 
 Variables are read from `.env` (template: [.env.example](.env.example)). Defaults align with [docker-compose.yml](docker-compose.yml):
