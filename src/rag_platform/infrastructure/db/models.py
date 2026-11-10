@@ -2,7 +2,7 @@ from datetime import datetime
 from uuid import UUID
 
 from pgvector.sqlalchemy import Vector
-from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import DateTime, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from rag_platform.domain.constants import EMBEDDING_DIMENSION
@@ -86,6 +86,14 @@ class DocumentChunkModel(Base, UUIDPrimaryKeyMixin, TimestampMixin):
     token_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     embedding: Mapped[list[float]] = mapped_column(Vector(EMBEDDING_DIMENSION), nullable=False)
     document: Mapped[DocumentModel] = relationship(back_populates="chunks")
+    __table_args__ = (
+        Index(
+            "ix_document_chunks_embedding_hnsw",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+    )
 
 
 class QueryModel(Base, UUIDPrimaryKeyMixin, TimestampMixin):
