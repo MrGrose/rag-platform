@@ -260,3 +260,7 @@ Team ADRs: `.cursor/docs/decisions/` (not in this git tree).
 - **Auth:** API keys per organization only — no bundled IdP/OAuth flow.
 
 CI: `make lint`, `make test`, [.github/workflows/ci.yml](.github/workflows/ci.yml).
+
+## License
+
+MIT. See [LICENSE](LICENSE).
