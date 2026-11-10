@@ -25,6 +25,10 @@ from rag_platform.domain.errors import NotFoundError, ValidationError
 logger = structlog.get_logger(__name__)
 
 
+def has_relevant_context(hits: list, threshold: float) -> bool:
+    return bool(hits) and hits[0].score >= threshold
+
+
 class Chat:
     def __init__(
         self,
@@ -111,7 +115,7 @@ class Chat:
                 ),
             )
             context, selected = build_context(reranked, settings.context_token_budget)
-            if not selected:
+            if not selected or not has_relevant_context(reranked, settings.rag_min_relevance_score):
                 insufficient = ChatResult(
                     query_id=query.id,
                     answer="Not enough indexed content to answer this question.",
