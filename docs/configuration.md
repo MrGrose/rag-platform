@@ -42,6 +42,25 @@ Environment-driven [Pydantic settings](../src/rag_platform/config/settings.py). 
 | `OUTBOX_MAX_ATTEMPTS` | Dead-letter threshold |
 | `OUTBOX_LOCK_SECONDS` | Claim lease |
 
+## Providers
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `EMBEDDINGS_PROVIDER` | `fake` | `fake` or `bge_m3` |
+| `EMBEDDINGS_MODEL` | `BAAI/bge-m3` | sentence-transformers model, 1024 dims |
+| `EMBEDDINGS_DEVICE` | `cpu` | `cpu` or `cuda` |
+| `EMBEDDINGS_BATCH_SIZE` | 16 | encode batch size |
+| `RERANKER_PROVIDER` | `fake` | `fake` or `bge_reranker` |
+| `RERANKER_MODEL` | `BAAI/bge-reranker-v2-m3` | cross-encoder model |
+| `LLM_PROVIDER` | `fake` | `fake` or `openai` (OpenAI-compatible endpoint) |
+| `LLM_BASE_URL` | `https://api.deepseek.com/v1` | chat completions base URL |
+| `LLM_API_KEY` | empty | required for a non-fake LLM |
+| `LLM_MODEL` | `deepseek-chat` | model name passed through |
+| `LLM_MAX_RETRIES` | 2 | retries on 429, 5xx, network errors |
+
+`bge_m3` and `bge_reranker` need the optional extra: `uv sync --extra local`.
+In production all three providers must be non-fake, and `ALLOW_FAKE_PROVIDERS` must be false.
+
 ## Retrieval / chat quality
 
 | Variable | Purpose |
@@ -51,6 +70,7 @@ Environment-driven [Pydantic settings](../src/rag_platform/config/settings.py). 
 | `CONTEXT_TOKEN_BUDGET` | context builder budget |
 | `LLM_TIMEOUT_SECONDS` | chat generation timeout |
 | `LLM_COST_PER_1K_TOKENS_USD` | estimated cost on `llm_requests` |
+| `RAG_MIN_RELEVANCE_SCORE` | top reranked score below which chat refuses without an LLM call |
 
 ## Processing
 

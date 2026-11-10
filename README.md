@@ -9,9 +9,9 @@ Implemented today:
 - **Document upload** — multipart upload to object storage; metadata scoped by organization and knowledge base.
 - **Parsing** — plain text and PDF extraction behind a parser registry.
 - **Chunking and indexing** — normalization, fixed-size chunking, embedding, and persistence (background job).
-- **Embeddings** — provider abstraction; fake embeddings for local dev, optional Ollama adapter.
+- **Embeddings** — provider abstraction; deterministic fake vectors for tests, local `bge-m3` (1024 dims) through `sentence-transformers`.
 - **Vector and full-text retrieval** — pgvector similarity plus PostgreSQL full-text search.
-- **Hybrid retrieval** — score fusion and reranking hooks in the application layer.
+- **Hybrid retrieval** — score fusion, optional `bge-reranker-v2-m3` cross-encoder, relevance threshold that refuses without calling the LLM.
 - **RAG chat** — context assembly, LLM call, citation validation, concurrency and budget guards (Redis).
 - **Query history** — stored queries with retrieval/LLM metadata; fetch by id.
 - **Evaluations** — async eval runs over datasets with lease-based worker safety.
@@ -53,7 +53,7 @@ Deeper diagrams and boundaries: [docs/architecture.md](docs/architecture.md).
 - **API:** FastAPI, Uvicorn
 - **Data:** PostgreSQL 16 + pgvector, SQLAlchemy 2 (async), Alembic
 - **Queue / cache:** Redis, [ARQ](https://arq-docs.helpmanual.io/)
-- **Object storage:** S3-compatible (MinIO in Compose)
+- **Object storage:** S3-compatible (LocalStack in Compose)
 - **Quality:** Ruff, pytest (see [Makefile](Makefile) and CI)
 
 ## Quick start
@@ -62,7 +62,7 @@ Prerequisites: Docker, Docker Compose, [uv](https://docs.astral.sh/uv/).
 
 ```bash
 git clone <repository-url>
-cd RAG-Planform
+cd rag-platform
 
 cp .env.example .env
 # edit .env if you change ports or secrets (see Configuration)
@@ -73,6 +73,8 @@ make migrate
 ```
 
 Migration `0003_dev_seed_org_kb` seeds organization `00000000-0000-0000-0000-000000000001` and a default knowledge base for local testing.
+
+Migration `0011_embedding_dimension_1024` moves chunk vectors to 1024 dimensions for `bge-m3` and drops old chunks. Re-index documents after upgrading if you used a smaller embedding model.
 
 Check the stack:
 
@@ -86,7 +88,7 @@ Interactive API docs: `http://localhost:8000/docs` (with the API running).
 Host-only API (dependencies in Compose):
 
 ```bash
-docker compose up -d postgres redis minio
+docker compose up -d postgres redis s3
 make migrate
 uvicorn rag_platform.main:app --host 0.0.0.0 --port 8000 --reload
 ```
@@ -108,7 +110,7 @@ Variables are read from `.env` (template: [.env.example](.env.example)). Default
 | API | 8000 |
 | PostgreSQL | 5436 |
 | Redis | 6380 |
-| MinIO API / console | 9000 / 9001 |
+| S3 (LocalStack) | 4566 |
 
 Exhaustive list and production rules: [docs/configuration.md](docs/configuration.md).
 
@@ -123,7 +125,7 @@ Exhaustive list and production rules: [docs/configuration.md](docs/configuration
 | Validate Compose | `make compose-config` |
 | Migrations | `make migrate` |
 
-Compose services: `postgres`, `redis`, `minio`, `api`, `worker`.
+Compose services: `postgres`, `redis`, `s3`, `s3-init`, `migrate`, `api`, `worker`. The app services live behind the `app` profile.
 
 ## API and authentication
 
@@ -199,7 +201,7 @@ Team ADRs: `.cursor/docs/decisions/` (not in this git tree).
 
 ## Current limitations
 
-- **Providers:** Dev defaults use fake/null LLM, reranker, and embeddings. Ollama embeddings and OpenAI-shaped adapters exist but are not a full multi-vendor LLM product.
+- **Providers:** Dev defaults use fake LLM, reranker, and embeddings so tests stay deterministic. Real mode uses `bge-m3` embeddings, `bge-reranker-v2-m3`, and any OpenAI-compatible chat endpoint; only that shape is supported, not a multi-vendor matrix.
 - **Cost:** Redis chat guards use **estimates**; no billing system.
 - **Semantics:** ARQ + outbox = **at-least-once**, not exactly-once.
 - **Operations:** Integration tests and `scripts/load_test_chat.py` help, but production still needs your own load and failure testing.
