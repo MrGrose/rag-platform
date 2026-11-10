@@ -1,0 +1,48 @@
+@host = http://localhost:8000
+@org = 00000000-0000-4000-8000-000000000001
+@kb = 00000000-0000-4000-8000-000000000002
+
+### Health
+GET {{host}}/health
+
+### Readiness
+GET {{host}}/ready
+
+### Upload a document
+POST {{host}}/v1/documents
+X-Organization-Id: {{org}}
+Content-Type: multipart/form-data; boundary=WebAppBoundary
+
+--WebAppBoundary
+Content-Disposition: form-data; name="knowledge_base_id"
+
+{{kb}}
+--WebAppBoundary
+Content-Disposition: form-data; name="file"; filename="refund-policy.md"
+Content-Type: text/markdown
+
+< ./examples/corpus/refund-policy.md
+--WebAppBoundary--
+
+### List documents
+GET {{host}}/v1/documents?knowledge_base_id={{kb}}
+X-Organization-Id: {{org}}
+
+### Ask a question
+POST {{host}}/v1/chat
+X-Organization-Id: {{org}}
+Content-Type: application/json
+
+{
+  "knowledge_base_id": "{{kb}}",
+  "question": "How many days do customers have to return most items?"
+}
+
+### Start an evaluation
+POST {{host}}/v1/evaluations
+X-Organization-Id: {{org}}
+Content-Type: application/json
+
+{
+  "knowledge_base_id": "{{kb}}"
+}

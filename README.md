@@ -101,6 +101,24 @@ arq rag_platform.workers.settings.WorkerSettings
 
 The Compose `worker` service runs the same ARQ settings class as the [Dockerfile](Dockerfile).
 
+## Demo
+
+```bash
+docker compose up -d postgres redis s3
+make migrate
+make demo
+```
+
+`make demo` ingests three example documents and asks three questions. With real providers the output looks like this:
+
+```text
+Q: What does express delivery cost and how fast is it?
+A: Express delivery costs an extra 15 EUR and arrives within 24 hours in selected cities [a1bcd29b-...].
+   citations: 1
+```
+
+HTTP examples for upload, chat and evaluation live in [examples/http/api.http](examples/http/api.http).
+
 ## Evaluation
 
 The repository ships a synthetic corpus of 12 documents (`examples/corpus`) and 44 questions (`evals/dataset.json`): 39 answerable, including multi-document ones, and 5 that the corpus cannot answer.
