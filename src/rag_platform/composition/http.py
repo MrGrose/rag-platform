@@ -26,10 +26,11 @@ from rag_platform.infrastructure.db.repositories import SqlAlchemyKnowledgeBaseR
 from rag_platform.infrastructure.db.retrieval_engine import PgHybridRetrievalEngine
 from rag_platform.infrastructure.fakes.chat_resource_guard import NoopChatResourceGuard
 from rag_platform.infrastructure.providers.cached_embeddings import CachedEmbeddingProvider
-from rag_platform.infrastructure.providers.fake_embeddings import FakeEmbeddingProvider
-from rag_platform.infrastructure.providers.fake_llm import FakeLlmProvider
-from rag_platform.infrastructure.providers.fake_reranker import FakeRerankerProvider
-from rag_platform.infrastructure.providers.guard import require_fake_providers_allowed
+from rag_platform.infrastructure.providers.factory import (
+    build_embeddings,
+    build_llm,
+    build_reranker,
+)
 from rag_platform.infrastructure.queue.arq import (
     enqueue_delete_document_vectors,
     enqueue_process_document,
@@ -45,18 +46,17 @@ def _kb_version() -> RedisKnowledgeBaseVersionPort:
 
 
 async def build_chat(session: AsyncSession, knowledge_base_id: UUID) -> Chat:
-    require_fake_providers_allowed()
+    settings = get_settings()
     kb_version = await _kb_version().current(str(knowledge_base_id))
-    inner_embeddings = FakeEmbeddingProvider()
-    embeddings = CachedEmbeddingProvider(inner_embeddings, kb_version)
+    embeddings = CachedEmbeddingProvider(build_embeddings(settings), kb_version)
     base_retrieval = PgHybridRetrievalEngine(session, embeddings)
     retrieval = CachedRetrievalEngine(base_retrieval)
     return Chat(
         kb_repo=SqlAlchemyKnowledgeBaseRepository(session),
         query_repo=SqlAlchemyQueryRepository(session),
         retrieval=retrieval,
-        reranker=FakeRerankerProvider(),
-        llm=FakeLlmProvider(),
+        reranker=build_reranker(settings),
+        llm=build_llm(settings),
         observability=PrometheusChatObservability(),
         llm_log=SqlAlchemyLlmRequestLog(session),
         resource_guard=(
@@ -119,7 +119,6 @@ def build_delete_document(session: AsyncSession) -> DeleteDocument:
 
 
 async def build_run_evaluation(session: AsyncSession, knowledge_base_id: UUID) -> RunEvaluation:
-    require_fake_providers_allowed()
     dataset_items = json.loads(_EVAL_DATASET.read_text(encoding="utf-8"))
     chat = await build_chat(session, knowledge_base_id)
     return RunEvaluation(

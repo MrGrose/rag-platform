@@ -20,6 +20,19 @@ class Settings(BaseSettings):
     s3_access_key: str = Field(default="minioadmin", alias="S3_ACCESS_KEY")
     s3_secret_key: str = Field(default="minioadmin", alias="S3_SECRET_KEY")
     s3_bucket: str = Field(default="rag-documents", alias="S3_BUCKET")
+    embeddings_provider: str = Field(default="fake", alias="EMBEDDINGS_PROVIDER")
+    embeddings_model: str = Field(default="BAAI/bge-m3", alias="EMBEDDINGS_MODEL")
+    embeddings_device: str = Field(default="cpu", alias="EMBEDDINGS_DEVICE")
+    embeddings_batch_size: int = Field(default=16, alias="EMBEDDINGS_BATCH_SIZE")
+    reranker_provider: str = Field(default="fake", alias="RERANKER_PROVIDER")
+    reranker_model: str = Field(default="BAAI/bge-reranker-v2-m3", alias="RERANKER_MODEL")
+    llm_provider: str = Field(default="fake", alias="LLM_PROVIDER")
+    llm_base_url: str = Field(default="https://api.deepseek.com/v1", alias="LLM_BASE_URL")
+    llm_api_key: str = Field(default="", alias="LLM_API_KEY")
+    llm_model: str = Field(default="deepseek-chat", alias="LLM_MODEL")
+    llm_temperature: float = Field(default=0.0, alias="LLM_TEMPERATURE")
+    llm_max_retries: int = Field(default=2, alias="LLM_MAX_RETRIES")
+    rag_min_relevance_score: float = Field(default=0.2, alias="RAG_MIN_RELEVANCE_SCORE")
     retrieval_top_k: int = Field(default=20, alias="RETRIEVAL_TOP_K")
     rerank_k: int = Field(default=10, alias="RERANK_K")
     context_token_budget: int = Field(default=2000, alias="CONTEXT_TOKEN_BUDGET")
@@ -62,6 +75,11 @@ class Settings(BaseSettings):
                 violations.append("RATE_LIMIT_FAIL_CLOSED must be true when APP_ENV=production")
             if self.allow_fake_providers:
                 violations.append("ALLOW_FAKE_PROVIDERS must be false when APP_ENV=production")
+            for name in ("embeddings_provider", "reranker_provider", "llm_provider"):
+                if getattr(self, name).strip().lower() == "fake":
+                    violations.append(f"{name.upper()} must not be fake when APP_ENV=production")
+            if self.llm_provider.strip().lower() != "fake" and not self.llm_api_key.strip():
+                violations.append("LLM_API_KEY is required for a non-fake LLM provider")
             if self.allow_legacy_global_api_key:
                 violations.append("ALLOW_LEGACY_GLOBAL_API_KEY must be false in production")
             if violations:

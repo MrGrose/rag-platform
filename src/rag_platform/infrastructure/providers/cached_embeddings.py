@@ -13,10 +13,12 @@ class CachedEmbeddingProvider(EmbeddingProvider):
         self._inner = inner
         self._kb_version = kb_version
         self.dimension = inner.dimension
+        model = getattr(inner, "model_name", "")
+        self._namespace = f"{type(inner).__name__}:{inner.dimension}:{model}:{kb_version}"
 
     async def embed_texts(self, texts: list[str]) -> list[list[float]]:
         digest = hash_embedding_inputs(texts)
-        key = f"{self._kb_version}:{digest}"
+        key = f"{self._namespace}:{digest}"
         cached = await cache_get("emb", key)
         if cached is not None:
             return deserialize_vectors(cached)
