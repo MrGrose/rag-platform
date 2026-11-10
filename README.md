@@ -165,6 +165,8 @@ What the table says:
 
 `examples/corpus_pdf` contains six two-page PDFs. `tests/integration/test_pdf_pages.py` checks that chunks keep page numbers and that retrieval returns `page: 2` for a fact that lives on the second page.
 
+`make eval-smoke` runs an eight-question hit@5 and refusal check with fake providers; CI runs it on every push.
+
 ## Fact extraction
 
 `POST /v1/extract` turns an indexed document into JSON with quote-level citations:

@@ -113,5 +113,7 @@ jobs:
 
           asyncio.run(main())
           '
+      - name: Eval smoke (hit@5 and refusal)
+        run: uv run pytest -q tests/integration/test_eval_smoke.py
       - name: Integration tests
         run: uv run pytest -q -m integration
