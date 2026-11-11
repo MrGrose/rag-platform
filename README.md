@@ -2,6 +2,8 @@
 
 Multi-tenant retrieval-augmented generation service: ingest documents, index chunks with embeddings, run hybrid search, and answer questions with cited context. Evaluations and operational hooks (health, metrics, rate limits) are built in for local development and staged production rollout.
 
+![RAG evaluation](docs/assets/rag-eval.webp)
+
 ## Features
 
 Implemented today:
