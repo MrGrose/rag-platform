@@ -277,7 +277,7 @@ Processing is **at-least-once** (retries on workers and outbox). Design handlers
 | [docs/architecture.md](docs/architecture.md) | Structure and flows |
 | [docs/configuration.md](docs/configuration.md) | Environment |
 
-Team ADRs: `.cursor/docs/decisions/` (not in this git tree).
+Team ADRs are kept outside this repository.
 
 ## Current limitations
 
